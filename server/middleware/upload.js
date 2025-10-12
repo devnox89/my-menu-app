@@ -1,8 +1,7 @@
-// server/middleware/upload.js
 const multer = require("multer");
 
-// Conserva il file in memoria come un Buffer.
-// Questo è efficiente per passare il file direttamente a servizi come Cloudinary.
+// Configura multer per salvare il file in memoria come un buffer
+// Questo è il modo più efficiente per passarlo poi a servizi come Cloudinary
 const storage = multer.memoryStorage();
 
 const upload = multer({ storage: storage });

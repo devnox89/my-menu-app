@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api/axiosConfig";
 import MenuItemModal from "./MenuItemModal";
+import { slugify } from "../utils/slugify";
 
 const PublicMenu = () => {
   const { slug } = useParams();
@@ -13,6 +14,7 @@ const PublicMenu = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [openCategory, setOpenCategory] = useState(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -20,11 +22,15 @@ const PublicMenu = () => {
     api
       .get(`/public/menu/${slug}`)
       .then((res) => {
+        const menuItems = res.data.menu.filter((item) => item.isAvailable);
         setRestaurantData({
           name: res.data.restaurantName,
-          menu: res.data.menu.filter((item) => item.isAvailable),
+          menu: menuItems,
           theme: res.data.theme,
         });
+
+        const firstCategory = menuItems.length > 0 ? menuItems[0].category || "Varie" : null;
+        setOpenCategory(firstCategory);
       })
       .catch((err) => {
         setError(err.response?.data?.message || "Impossibile caricare il menu.");
@@ -57,47 +63,77 @@ const PublicMenu = () => {
   const handleOpenModal = (item) => setSelectedItem(item);
   const handleCloseModal = () => setSelectedItem(null);
 
+  const toggleCategory = (category) => {
+    setOpenCategory((prevOpenCategory) => (prevOpenCategory === category ? null : category));
+  };
+
   return (
     <div style={themeStyles} className="bg-[var(--color-background)] text-[var(--color-text)] min-h-screen">
       <div className="container mx-auto p-4 md:p-8">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-[var(--color-heading)]">{restaurantData.name}</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-[var(--color-heading)]">Il {restaurantData.name}</h1>
           <p className="text-2xl font-light mt-1 text-[var(--color-text)]">Menù</p>
         </div>
 
-        {Object.keys(groupedMenu).map((category) => (
-          <div key={category} className="mb-12">
-            <h2 className="text-3xl font-semibold text-center mb-8 text-[var(--color-heading)] border-b-2 border-[var(--color-border)] pb-2">{category}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {groupedMenu[category].map((item) => (
-                <div
-                  key={item._id}
-                  onClick={() => handleOpenModal(item)}
-                  className="bg-[var(--color-card)] rounded-lg shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:scale-105 cursor-pointer border-2 border-[var(--color-card-border)] hover:border-[var(--color-primary)]"
+        <div className="space-y-4">
+          {Object.keys(groupedMenu).map((category) => (
+            <div key={category} className="bg-[var(--color-card)] rounded-lg shadow-md overflow-hidden border border-[var(--color-card-border)]">
+              <button onClick={() => toggleCategory(category)} className="w-full flex justify-between items-center p-4">
+                <h2 className="text-2xl font-semibold text-[var(--color-heading)]">{category}</h2>
+                <svg
+                  className={`w-6 h-6 text-[var(--color-primary)] transition-transform duration-300 ${openCategory === category ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
                 >
-                  <img src={item.imageUrl || "/no-image-placeholder.png"} alt={item.name} className="w-full h-48 object-cover" />
-                  <div className="p-6 flex flex-col flex-grow">
-                    <h3 className="text-xl font-bold text-[var(--color-heading)]">{item.name}</h3>
-                    <p className="text-[var(--color-text)] my-2 flex-grow">{item.description ? item.description.substring(0, 60) + "..." : ""}</p>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
 
-                    {/* Display allergen info on the card */}
-                    {item.allergens && (
-                      <div className="mt-auto pt-2 border-t border-dashed">
-                        <p className="text-xs text-gray-500 italic">
-                          <span className="font-semibold">Info Allergeni:</span> {item.allergens}
-                        </p>
-                      </div>
-                    )}
+              <div className={`transition-all duration-500 ease-in-out grid ${openCategory === category ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                <div className="overflow-hidden">
+                  <div className="p-4 border-t border-[var(--color-border)]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                      {groupedMenu[category].map((item) => {
+                        const lowestPrice = item.variants && item.variants.length > 0 ? Math.min(...item.variants.map((v) => v.price)) : 0;
 
-                    <div className="flex justify-end items-center mt-2">
-                      <strong className="text-lg text-[var(--color-primary)]">€{item.price.toFixed(2)}</strong>
+                        return (
+                          <div
+                            key={item._id}
+                            onClick={() => handleOpenModal(item)}
+                            className="bg-[var(--color-card)] rounded-lg shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:scale-105 cursor-pointer border-2 border-transparent hover:border-[var(--color-primary)]"
+                          >
+                            <img src={item.imageUrl || "/no-image-placeholder.png"} alt={item.name} className="w-full h-48 object-cover" />
+                            <div className="p-6 flex flex-col flex-grow">
+                              <h3 className="text-xl font-bold text-[var(--color-heading)]">{item.name}</h3>
+                              <p className="text-[var(--color-text)] my-2 flex-grow">{item.description ? item.description.substring(0, 60) + "..." : ""}</p>
+
+                              {item.allergens && (
+                                <div className="mt-auto pt-2 border-t border-dashed">
+                                  <p className="text-xs text-gray-500 italic">
+                                    <span className="font-semibold">Info Allergeni:</span> {item.allergens}
+                                  </p>
+                                </div>
+                              )}
+
+                              <div className="flex justify-end items-center mt-2">
+                                <strong className="text-lg text-[var(--color-primary)]">
+                                  {item.variants.length > 1 ? "Da " : ""}€{lowestPrice.toFixed(2)}
+                                </strong>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
         {selectedItem && <MenuItemModal item={selectedItem} onClose={handleCloseModal} />}
       </div>
     </div>

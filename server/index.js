@@ -3,13 +3,12 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 
-// Import routers
 const authRouter = require("./routes/auth");
 const menuRouter = require("./routes/menu");
 const publicRouter = require("./routes/public");
 const paymentRouter = require("./routes/payment");
+const categoryRouter = require("./routes/category"); // <-- NUOVO
 
-// Imports for Stripe Webhook
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const User = require("./models/User");
 
@@ -18,7 +17,6 @@ const port = process.env.PORT || 5000;
 
 app.use(cors());
 
-// Stripe Webhook endpoint
 app.post("/api/payments/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -35,7 +33,7 @@ app.post("/api/payments/webhook", express.raw({ type: "application/json" }), asy
     if (user) {
       user.subscriptionStatus = "active";
       await user.save();
-      console.log(`✅ Subscription activated for user: ${user.username}`);
+      console.log(`✅ Abbonamento attivato per l'utente: ${user.username}`);
     }
   }
   res.status(200).json({ received: true });
@@ -43,17 +41,15 @@ app.post("/api/payments/webhook", express.raw({ type: "application/json" }), asy
 
 app.use(express.json());
 
-// Database Connection
 mongoose
   .connect(process.env.DATABASE_URL)
-  .then(() => console.log("Connected to Database"))
-  .catch((err) => console.error("Connection error", err));
+  .then(() => console.log("Connesso al Database"))
+  .catch((err) => console.error("Errore di connessione", err));
 
-// API Routes
 app.use("/api/auth", authRouter);
 app.use("/api/menu", menuRouter);
 app.use("/api/public", publicRouter);
 app.use("/api/payments", paymentRouter);
+app.use("/api/categories", categoryRouter); // <-- NUOVO
 
-// Start Server
-app.listen(port, () => console.log(`Server started on port ${port}`));
+app.listen(port, () => console.log(`Server avviato sulla porta ${port}`));

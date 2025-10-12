@@ -3,30 +3,31 @@ import api from "../api/axiosConfig";
 import { toast } from "react-hot-toast";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import CategoryManager from "./CategoryManager";
 import MenuItemForm from "./MenuItemForm";
 import { SortableMenuItem } from "./SortableMenuItem";
 
 const MenuManager = () => {
-  // ORA GESTIAMO LO STATO DIRETTAMENTE QUI
   const [menuItems, setMenuItems] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState(null);
 
-  // FUNZIONE PER CARICARE I DATI
-  const fetchMenuItems = () => {
-    setLoading(true);
-    api
-      .get("/menu")
-      .then((res) => {
-        setMenuItems(res.data);
-      })
-      .catch(() => toast.error("Impossibile caricare i piatti."))
-      .finally(() => setLoading(false));
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [menuRes, catRes] = await Promise.all([api.get("/menu"), api.get("/categories")]);
+      setMenuItems(menuRes.data);
+      setCategories(catRes.data);
+    } catch (error) {
+      toast.error("Impossibile caricare i dati della dashboard.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // CARICA I DATI AL PRIMO RENDER
   useEffect(() => {
-    fetchMenuItems();
+    fetchData();
   }, []);
 
   const handleDragEnd = (event) => {
@@ -36,7 +37,7 @@ const MenuManager = () => {
       const newIndex = menuItems.findIndex((item) => item._id === over.id);
       const newOrder = arrayMove(menuItems, oldIndex, newIndex);
 
-      setMenuItems(newOrder); // Aggiorna UI istantaneamente
+      setMenuItems(newOrder);
 
       const orderedIds = newOrder.map((item) => item._id);
       api
@@ -44,7 +45,7 @@ const MenuManager = () => {
         .then(() => toast.success("Ordine salvato!"))
         .catch(() => {
           toast.error("Errore nel salvataggio dell'ordine.");
-          fetchMenuItems(); // Ricarica l'ordine corretto in caso di errore
+          fetchData();
         });
     }
   };
@@ -55,7 +56,7 @@ const MenuManager = () => {
         .delete(`/menu/${id}`)
         .then(() => {
           toast.success("Piatto eliminato!");
-          fetchMenuItems(); // Ricarica la lista
+          fetchData(); // Ricarica i dati per aggiornare la lista
         })
         .catch(() => toast.error("Errore durante l'eliminazione."));
     }
@@ -66,14 +67,20 @@ const MenuManager = () => {
       .patch(`/menu/${id}/toggle`)
       .then(() => {
         toast.success("Disponibilità aggiornata!");
-        fetchMenuItems(); // Ricarica la lista
+        fetchData(); // Ricarica i dati per aggiornare lo stato
       })
       .catch(() => toast.error("Errore durante l'aggiornamento."));
   };
 
-  const handleFormSubmit = () => {
-    fetchMenuItems(); // Ricarica l'intera lista per avere i dati più recenti
-    setEditingItem(null);
+  const handleFormSubmit = (updatedOrNewItem) => {
+    if (editingItem) {
+      // Se stavamo modificando, sostituisci l'elemento vecchio con quello nuovo nell'array
+      setMenuItems((prevItems) => prevItems.map((item) => (item._id === updatedOrNewItem._id ? updatedOrNewItem : item)));
+    } else {
+      // Se era un nuovo piatto, aggiungilo in fondo all'array
+      setMenuItems((prevItems) => [...prevItems, updatedOrNewItem]);
+    }
+    setEditingItem(null); // Chiude il form
   };
 
   if (loading) {
@@ -83,7 +90,11 @@ const MenuManager = () => {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold mb-6">Gestione Piatti</h1>
-      <MenuItemForm itemToEdit={editingItem} onFormSubmit={handleFormSubmit} clearEdit={() => setEditingItem(null)} />
+
+      <CategoryManager categories={categories} setCategories={setCategories} />
+
+      <MenuItemForm itemToEdit={editingItem} onFormSubmit={handleFormSubmit} clearEdit={() => setEditingItem(null)} categories={categories} />
+
       <div className="bg-white p-6 rounded-lg shadow-md">
         <h2 className="text-2xl font-bold mb-4">Elenco Piatti</h2>
         <p className="text-sm text-gray-500 mb-4">Clicca e trascina le icone con i puntini per riordinare i piatti.</p>

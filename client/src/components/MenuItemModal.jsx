@@ -15,13 +15,22 @@ const MenuItemModal = ({ item, onClose }) => {
         <img src={item.imageUrl ? item.imageUrl : "/no-image-placeholder.png"} alt={item.name} className="w-full h-64 object-cover" />
 
         <div className="p-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">{item.name}</h1>
-          <p className="text-xl text-yellow-600 font-semibold mb-4">€{item.price.toFixed(2)}</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">{item.name}</h1>
 
-          <p className="text-gray-700 mb-6">{item.description}</p>
+          {/* Lista delle Varianti di Prezzo */}
+          <div className="my-4 space-y-2 border-t border-b py-4">
+            {item.variants.map((variant, index) => (
+              <div key={index} className="flex justify-between items-center">
+                <span className="text-gray-700">{variant.name}</span>
+                <span className="font-semibold text-yellow-600">€{variant.price.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
 
-          {/* Display allergen info if it exists and is a non-empty string */}
-          {item.allergens && typeof item.allergens === "string" && item.allergens.trim() !== "" && (
+          <p className="text-gray-700 my-6">{item.description}</p>
+
+          {/* Sezione Allergeni a Tendina */}
+          {item.allergens && item.allergens.trim() !== "" && (
             <div className="border-t pt-4">
               <button onClick={() => setIsAllergensOpen(!isAllergensOpen)} className="w-full flex justify-between items-center text-left font-bold text-yellow-800">
                 <span>Informazioni su Allergeni</span>
