@@ -79,7 +79,7 @@ const PublicMenu = () => {
           {Object.keys(groupedMenu).map((category) => (
             <div key={category} className="bg-[var(--color-card)] rounded-lg shadow-md overflow-hidden border border-[var(--color-card-border)]">
               <button onClick={() => toggleCategory(category)} className="w-full flex justify-between items-center p-4">
-                <h2 className="text-2xl font-semibold text-[var(--color-heading)] uppercase">{category}</h2>
+                <h2 className="text-2xl font-semibold text-[var(--color-heading)] uppercase text-center">{category}</h2>
                 <svg
                   className={`w-6 h-6 text-[var(--color-primary)] transition-transform duration-300 ${openCategory === category ? "rotate-180" : ""}`}
                   fill="none"
