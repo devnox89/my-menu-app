@@ -38,7 +38,7 @@ export const SortableMenuItem = ({ item, onEdit, onDelete, onToggleAvailability 
           onClick={() => onToggleAvailability(item._id)}
           className={`px-3 py-1 rounded text-sm text-white ${item.isAvailable ? "bg-green-500 hover:bg-green-600" : "bg-gray-500 hover:bg-gray-600"}`}
         >
-          {item.isAvailable ? "Disponibile" : "Esaurito"}
+          {item.isAvailable ? "Togli" : "Aggiungi"}
         </button>
         <button onClick={onEdit} className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">
           Modifica
