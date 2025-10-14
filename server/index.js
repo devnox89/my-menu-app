@@ -41,6 +41,12 @@ app.post("/api/payments/webhook", express.raw({ type: "application/json" }), asy
 
 app.use(express.json());
 
+// ## NUOVA ROTTA PER HEALTH CHECK ##
+// Risponde alla rotta principale (/)
+app.get("/", (req, res) => {
+  res.send("API is running...");
+});
+
 mongoose
   .connect(process.env.DATABASE_URL)
   .then(() => console.log("Connesso al Database"))
