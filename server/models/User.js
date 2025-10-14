@@ -6,6 +6,8 @@ const UserSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, match: [/.+\@.+\..+/, "Email non valida"] },
     password: { type: String, required: true },
     restaurantName: { type: String, required: true },
+    restaurantDescription: { type: String, default: "" },
+    coverCharge: { type: Number, default: 0 },
     slug: { type: String, required: true, unique: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     subscriptionStatus: { type: String, enum: ["active", "inactive", "canceled"], default: "inactive" },

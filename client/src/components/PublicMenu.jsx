@@ -8,6 +8,8 @@ const PublicMenu = () => {
   const { slug } = useParams();
   const [restaurantData, setRestaurantData] = useState({
     name: "",
+    description: "",
+    coverCharge: 0,
     menu: [],
     theme: null,
   });
@@ -25,12 +27,16 @@ const PublicMenu = () => {
         const menuItems = res.data.menu.filter((item) => item.isAvailable);
         setRestaurantData({
           name: res.data.restaurantName,
+          description: res.data.restaurantDescription,
+          coverCharge: res.data.coverCharge,
           menu: menuItems,
           theme: res.data.theme,
         });
 
-        const firstCategory = menuItems.length > 0 ? menuItems[0].category || "Varie" : null;
-        setOpenCategory(firstCategory);
+        if (menuItems.length > 0) {
+          const firstCategory = menuItems[0].category || "Varie";
+          setOpenCategory(firstCategory);
+        }
       })
       .catch((err) => {
         setError(err.response?.data?.message || "Impossibile caricare il menu.");
@@ -71,15 +77,17 @@ const PublicMenu = () => {
     <div style={themeStyles} className="bg-[var(--color-background)] text-[var(--color-text)] min-h-screen">
       <div className="container mx-auto p-4 md:p-8">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-[var(--color-heading)] uppercase">{restaurantData.name}</h1>
-          <p className="text-2xl font-light mt-1 text-[var(--color-text)]">Menù</p>
+          <h1 className="text-4xl md:text-5xl font-bold text-[var(--color-heading)]">Il {restaurantData.name}</h1>
+          {restaurantData.description && <p className="text-lg text-[var(--color-text)] mt-2 max-w-2xl mx-auto">{restaurantData.description}</p>}
+          <p className="text-4xl font-bold uppercase mt-4 text-[var(--color-text)]">Menù</p>
+          {restaurantData.coverCharge > 0 && <p className="text-xl text-gray-500 italic mt-2">Coperto: €{restaurantData.coverCharge.toFixed(2)} a persona</p>}
         </div>
 
         <div className="space-y-4">
           {Object.keys(groupedMenu).map((category) => (
             <div key={category} className="bg-[var(--color-card)] rounded-lg shadow-md overflow-hidden border border-[var(--color-card-border)]">
               <button onClick={() => toggleCategory(category)} className="w-full flex justify-between items-center p-4">
-                <h2 className="text-2xl font-semibold text-[var(--color-heading)] uppercase text-center">{category}</h2>
+                <h2 className="text-2xl font-semibold text-[var(--color-heading)]">{category}</h2>
                 <svg
                   className={`w-6 h-6 text-[var(--color-primary)] transition-transform duration-300 ${openCategory === category ? "rotate-180" : ""}`}
                   fill="none"

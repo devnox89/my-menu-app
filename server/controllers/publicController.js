@@ -14,11 +14,12 @@ exports.getPublicMenu = async (req, res) => {
 
     const menuItems = await MenuItem.find({ user: user._id, isAvailable: true }).sort({ position: 1 });
 
-    // Risposta aggiornata per includere il tema
     res.json({
       restaurantName: user.restaurantName,
+      restaurantDescription: user.restaurantDescription,
+      coverCharge: user.coverCharge,
       menu: menuItems,
-      theme: user.theme, // <-- AGGIUNTO
+      theme: user.theme,
     });
   } catch (err) {
     res.status(500).json({ message: "Errore del server" });

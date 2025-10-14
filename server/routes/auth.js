@@ -76,39 +76,41 @@ router.get("/me", protect, async (req, res) => {
   }
 });
 
-// ROTTA PER AGGIORNARE IL PROFILO UTENTE: PUT /api/auth/profile
 router.put("/profile", protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
 
     if (user) {
-      // Controllo duplicati per username/email
+      // Controllo duplicati
       if (req.body.username || req.body.email) {
         const userExists = await User.findOne({
           $or: [{ username: req.body.username }, { email: req.body.email }],
           _id: { $ne: user._id },
         });
         if (userExists) {
-          return res.status(400).json({ message: "Username o Email già in uso da un altro account." });
+          return res.status(400).json({ message: "Username o Email già in uso." });
         }
       }
+
+      // Aggiornamento campi
+      user.username = req.body.username || user.username;
+      user.email = req.body.email || user.email;
+
+      // Aggiorna i nuovi campi
+      user.restaurantDescription = req.body.restaurantDescription;
+      user.coverCharge = req.body.coverCharge;
 
       // Aggiornamento slug se il nome del ristorante cambia
       if (req.body.restaurantName && req.body.restaurantName !== user.restaurantName) {
         const newSlug = slugify(req.body.restaurantName, { lower: true, strict: true });
-
         const slugExists = await User.findOne({ slug: newSlug, _id: { $ne: user._id } });
         if (slugExists) {
-          return res.status(400).json({ message: "Un altro ristorante sta già usando un nome molto simile. Prova una variante." });
+          return res.status(400).json({ message: "Un altro ristorante sta già usando un nome molto simile." });
         }
-
         user.restaurantName = req.body.restaurantName;
         user.slug = newSlug;
       }
 
-      // Aggiornamento altri campi
-      user.username = req.body.username || user.username;
-      user.email = req.body.email || user.email;
       if (req.body.password) {
         user.password = await bcrypt.hash(req.body.password, 10);
       }
