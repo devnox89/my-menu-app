@@ -1,19 +1,24 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react"; // Aggiunto useRef
 import api from "../api/axiosConfig";
 import { toast } from "react-hot-toast";
 
 const MenuItemForm = ({ itemToEdit, onFormSubmit, clearEdit, categories }) => {
-  const [formData, setFormData] = useState({
+  // Definisce gli stati iniziali per il reset
+  const initialFormData = {
     name: "",
     description: "",
-    category: "",
+    category: categories && categories.length > 0 ? categories[0] : "",
     allergens: "",
     image: null,
     imageUrl: "",
-  });
-  const [variants, setVariants] = useState([{ name: "Standard", price: "" }]);
+  };
+  const initialVariants = [{ name: "Standard", price: "" }];
+
+  const [formData, setFormData] = useState(initialFormData);
+  const [variants, setVariants] = useState(initialVariants);
   const [imagePreview, setImagePreview] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef(null); // Ref per l'input file
 
   useEffect(() => {
     if (itemToEdit) {
@@ -25,21 +30,30 @@ const MenuItemForm = ({ itemToEdit, onFormSubmit, clearEdit, categories }) => {
         image: null,
         imageUrl: itemToEdit.imageUrl || "",
       });
-      setVariants(itemToEdit.variants && itemToEdit.variants.length > 0 ? JSON.parse(JSON.stringify(itemToEdit.variants)) : [{ name: "Standard", price: "" }]);
+      setVariants(itemToEdit.variants && itemToEdit.variants.length > 0 ? JSON.parse(JSON.stringify(itemToEdit.variants)) : initialVariants);
       setImagePreview(itemToEdit.imageUrl || "");
+      if (fileInputRef.current) {
+        // Pulisce l'input file anche quando si inizia a modificare
+        fileInputRef.current.value = "";
+      }
     } else {
-      setFormData({
-        name: "",
-        description: "",
-        allergens: "",
-        image: null,
-        imageUrl: "",
-        category: categories && categories.length > 0 ? categories[0] : "",
-      });
-      setVariants([{ name: "Standard", price: "" }]);
-      setImagePreview("");
+      resetForm(); // Usa la funzione di reset quando si cancella la modifica o si inizia ad aggiungere
     }
-  }, [itemToEdit, categories]);
+  }, [itemToEdit, categories]); // categories aggiunto per aggiornare il default se cambiano
+
+  // Funzione per resettare tutti gli stati del form
+  const resetForm = () => {
+    setFormData({
+      ...initialFormData,
+      // Reimposta la categoria di default se le categorie esistono
+      category: categories && categories.length > 0 ? categories[0] : "",
+    });
+    setVariants(initialVariants);
+    setImagePreview("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Resetta l'input file visivamente
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -79,7 +93,8 @@ const MenuItemForm = ({ itemToEdit, onFormSubmit, clearEdit, categories }) => {
       reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
     } else {
-      setImagePreview(formData.imageUrl || "");
+      // Se si deseleziona un file, mostra l'immagine esistente (se c'è) o nulla
+      setImagePreview(itemToEdit?.imageUrl || "");
     }
   };
 
@@ -98,16 +113,16 @@ const MenuItemForm = ({ itemToEdit, onFormSubmit, clearEdit, categories }) => {
     }
 
     try {
-      let response;
-      if (itemToEdit) {
-        response = await api.put(`/menu/${itemToEdit._id}`, data);
-        toast.success("Piatto aggiornato!");
-      } else {
-        response = await api.post("/menu", data);
-        toast.success("Piatto aggiunto!");
+      const response = itemToEdit ? await api.put(`/menu/${itemToEdit._id}`, data) : await api.post("/menu", data);
+
+      toast.success(itemToEdit ? "Piatto aggiornato!" : "Piatto aggiunto!");
+      onFormSubmit(response.data); // Notifica il genitore
+
+      if (!itemToEdit) {
+        // Resetta solo se stavamo aggiungendo un nuovo piatto
+        resetForm();
       }
-      onFormSubmit(response.data);
-      clearEdit();
+      clearEdit(); // Chiama comunque clearEdit per uscire dalla modalità modifica
     } catch (error) {
       toast.error(error.response?.data?.message || "Errore durante l'operazione.");
     } finally {
@@ -127,9 +142,11 @@ const MenuItemForm = ({ itemToEdit, onFormSubmit, clearEdit, categories }) => {
           <div>
             <label className="block text-gray-700 mb-1 font-semibold">Categoria</label>
             <select name="category" value={formData.category} onChange={handleChange} className="w-full p-2 border rounded bg-white" required>
-              <option value="" disabled>
-                Seleziona una categoria
-              </option>
+              {!formData.category && (
+                <option value="" disabled>
+                  Seleziona
+                </option>
+              )}
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
@@ -165,6 +182,7 @@ const MenuItemForm = ({ itemToEdit, onFormSubmit, clearEdit, categories }) => {
                   placeholder="Prezzo (€)"
                   className="w-1/3 p-2 border rounded"
                   step="0.01"
+                  min="0"
                   required
                 />
                 <button type="button" onClick={() => removeVariant(index)} className="bg-red-100 text-red-600 p-2 rounded-full hover:bg-red-200 disabled:opacity-50" disabled={variants.length <= 1}>
@@ -197,8 +215,10 @@ const MenuItemForm = ({ itemToEdit, onFormSubmit, clearEdit, categories }) => {
             name="image"
             accept="image/*"
             onChange={handleImageChange}
+            ref={fileInputRef}
             className="w-full p-2 border rounded file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100"
           />
+          {imagePreview && <img src={imagePreview} alt="Anteprima" className="mt-4 max-h-48 object-cover rounded shadow" />}
         </div>
 
         <div className="flex justify-end space-x-2 pt-4">
